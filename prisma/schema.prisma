@@ -1,0 +1,150 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum TestStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum ScheduleStatus {
+  SCHEDULED
+  RUNNING
+  COMPLETED
+  CANCELLED
+}
+
+enum Recurrence {
+  ONCE
+  DAILY
+  WEEKLY
+}
+
+model User {
+  id             String          @id @default(cuid())
+  email          String          @unique
+  password       String
+  name           String
+  role           Role            @default(USER)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  playlists      Playlist[]
+  testResults    TestResult[]
+  activityLogs   ActivityLog[]
+  notifications  Notification[]
+  scheduledTests ScheduledTest[]
+}
+
+model Playlist {
+  id             String          @id @default(cuid())
+  name           String
+  userId         String
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items          PlaylistItem[]
+  scheduledTests ScheduledTest[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([userId])
+}
+
+model PlaylistItem {
+  id          String       @id @default(cuid())
+  playlistId  String
+  playlist    Playlist     @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  channelName String
+  url         String
+  sortOrder   Int          @default(0)
+  createdAt   DateTime     @default(now())
+  testResults TestResult[]
+
+  @@index([playlistId])
+}
+
+model TestResult {
+  id             String        @id @default(cuid())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  playlistItemId String?
+  playlistItem   PlaylistItem? @relation(fields: [playlistItemId], references: [id], onDelete: SetNull)
+  url            String
+  channelName    String?
+  freeze         Json?
+  mosaic         Json?
+  blackFrame     Json?
+  avSync         Json?
+  lossFrame      Json?
+  latency        Float?
+  jitter         Float?
+  bitrate        Json?
+  bufferHealth   Json?
+  minuteSnapshots   Json?
+  detectionTimeline Json?
+  bitrateTimeline   Json?
+  status         TestStatus    @default(PENDING)
+  errorMessage   String?
+  duration       Float?
+  testedAt       DateTime      @default(now())
+
+  @@index([userId])
+  @@index([testedAt])
+  @@index([status])
+  @@index([userId, status])
+}
+
+model ScheduledTest {
+  id           String         @id @default(cuid())
+  userId       String
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  playlistId   String?
+  playlist     Playlist?      @relation(fields: [playlistId], references: [id], onDelete: SetNull)
+  channels     Json?          // [{url, channelName}] for manual URL entries
+  testDuration Int            @default(30) // seconds
+  scheduledAt  DateTime
+  recurrence   Recurrence     @default(ONCE)
+  status       ScheduleStatus @default(SCHEDULED)
+  lastRunAt    DateTime?
+  createdAt    DateTime       @default(now())
+
+  @@index([userId])
+  @@index([scheduledAt])
+  @@index([status])
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action    String
+  details   String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
