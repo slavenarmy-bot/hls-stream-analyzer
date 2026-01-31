@@ -5,7 +5,7 @@ FROM node:20-alpine AS deps
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --force
 
 # ============================================================
 # Stage 2: Build the application
@@ -49,10 +49,13 @@ COPY --from=builder /app/public ./public
 
 # Copy Prisma files needed for migrations at runtime
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+
+# Install Prisma CLI with all its dependencies for runtime migrations
+RUN npm install --no-save --force prisma
+
+# Copy Docker-specific Prisma config (without dotenv - env vars set by docker-compose)
+COPY docker-prisma.config.ts ./prisma.config.ts
 
 # Copy the generated Prisma client
 COPY --from=builder /app/src/generated/prisma ./src/generated/prisma
@@ -72,6 +75,6 @@ ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
+  CMD wget --no-verbose --tries=1 -qO /dev/null http://localhost:3000/ || exit 1
 
 ENTRYPOINT ["./docker-entrypoint.sh"]
