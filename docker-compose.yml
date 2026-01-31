@@ -10,6 +10,7 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
       - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - AUTH_TRUST_HOST=true
       - PYTHON_ANALYZER_URL=http://analyzer:8000
     depends_on:
       analyzer:
