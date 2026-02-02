@@ -43,29 +43,26 @@ RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
 # Copy the standalone output
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
 # Copy Prisma files needed for migrations at runtime
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/package.json ./package.json
+COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 
 # Install Prisma CLI with all its dependencies for runtime migrations
-RUN npm install --no-save --force prisma
+RUN npm install --no-save --force prisma && chown -R nextjs:nodejs node_modules
 
 # Copy Docker-specific Prisma config (without dotenv - env vars set by docker-compose)
-COPY docker-prisma.config.ts ./prisma.config.ts
+COPY --chown=nextjs:nodejs docker-prisma.config.ts ./prisma.config.ts
 
 # Copy the generated Prisma client
-COPY --from=builder /app/src/generated/prisma ./src/generated/prisma
+COPY --from=builder --chown=nextjs:nodejs /app/src/generated/prisma ./src/generated/prisma
 
 # Copy startup script
-COPY docker-entrypoint.sh ./docker-entrypoint.sh
+COPY --chown=nextjs:nodejs docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x docker-entrypoint.sh
-
-# Set ownership
-RUN chown -R nextjs:nodejs /app
 
 USER nextjs
 
