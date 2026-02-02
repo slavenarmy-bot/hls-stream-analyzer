@@ -4,9 +4,9 @@
 FROM python:3.12-slim AS builder
 
 # Install build dependencies for PyAV (FFmpeg) and OpenCV
-RUN --mount=type=cache,target=/var/cache/apt \
-    --mount=type=cache,target=/var/lib/apt \
-    apt-get update && apt-get install -y --no-install-recommends \
+# Retry apt-get update up to 3 times to handle transient network issues
+RUN for i in 1 2 3; do apt-get update && break || sleep 5; done && \
+    apt-get install -y --no-install-recommends \
     build-essential \
     pkg-config \
     libavformat-dev \
@@ -15,7 +15,8 @@ RUN --mount=type=cache,target=/var/cache/apt \
     libavutil-dev \
     libavfilter-dev \
     libswscale-dev \
-    libswresample-dev
+    libswresample-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -33,11 +34,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 FROM python:3.12-slim AS runner
 
 # Install only runtime FFmpeg libraries (no build tools)
-RUN --mount=type=cache,target=/var/cache/apt \
-    --mount=type=cache,target=/var/lib/apt \
-    apt-get update && apt-get install -y --no-install-recommends \
+# Retry apt-get update up to 3 times to handle transient network issues
+RUN for i in 1 2 3; do apt-get update && break || sleep 5; done && \
+    apt-get install -y --no-install-recommends \
     ffmpeg \
-    wget
+    wget \
+    && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
 RUN groupadd --system analyzer && \
