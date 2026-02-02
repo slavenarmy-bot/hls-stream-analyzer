@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      network: host
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
@@ -18,4 +19,5 @@ services:
     build:
       context: ./python-analyzer
       dockerfile: Dockerfile
+      network: host
     restart: unless-stopped
