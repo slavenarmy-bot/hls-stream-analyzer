@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 # ============================================================
 # Stage 1: Install dependencies
 # ============================================================
@@ -5,7 +6,7 @@ FROM node:20-alpine AS deps
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci --force
+RUN --network=host npm ci --force
 
 # ============================================================
 # Stage 2: Build the application
@@ -52,7 +53,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 
 # Install Prisma CLI with all its dependencies for runtime migrations
-RUN npm install --no-save --force prisma && chown -R nextjs:nodejs node_modules
+RUN --network=host npm install --no-save --force prisma && chown -R nextjs:nodejs node_modules
 
 # Copy Docker-specific Prisma config (without dotenv - env vars set by docker-compose)
 COPY --chown=nextjs:nodejs docker-prisma.config.ts ./prisma.config.ts
