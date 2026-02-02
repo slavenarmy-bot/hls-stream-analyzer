@@ -1,9 +1,6 @@
 services:
   nextjs:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      network: host
+    image: ghcr.io/slavenarmy-bot/hls-nextjs:latest
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
@@ -16,8 +13,5 @@ services:
     restart: unless-stopped
 
   analyzer:
-    build:
-      context: ./python-analyzer
-      dockerfile: Dockerfile
-      network: host
+    image: ghcr.io/slavenarmy-bot/hls-analyzer:latest
     restart: unless-stopped

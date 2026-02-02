@@ -1,12 +1,10 @@
-# syntax=docker/dockerfile:1
 # ============================================================
 # Stage 1: Build dependencies (with compile tools)
 # ============================================================
 FROM python:3.12-slim AS builder
 
 # Install build dependencies for PyAV (FFmpeg) and OpenCV
-# --network=host tells BuildKit to use host network (fixes Coolify DNS)
-RUN --network=host apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     pkg-config \
     libavformat-dev \
@@ -26,7 +24,7 @@ COPY requirements.txt .
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-RUN --network=host pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # ============================================================
 # Stage 2: Production runner
@@ -34,7 +32,7 @@ RUN --network=host pip install --no-cache-dir -r requirements.txt
 FROM python:3.12-slim AS runner
 
 # Install only runtime FFmpeg libraries (no build tools)
-RUN --network=host apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     wget \
     && rm -rf /var/lib/apt/lists/*
