@@ -27,15 +27,18 @@ ENV PATH="/opt/venv/bin:$PATH"
 RUN pip install --no-cache-dir -r requirements.txt
 
 # ============================================================
-# Stage 2: Production runner
+# Stage 2: Get static FFmpeg binaries
+# ============================================================
+FROM mwader/static-ffmpeg:7.1 AS ffmpeg
+
+# ============================================================
+# Stage 3: Production runner (no apt-get needed)
 # ============================================================
 FROM python:3.12-slim AS runner
 
-# Install only runtime FFmpeg libraries (no build tools)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    ffmpeg \
-    wget \
-    && rm -rf /var/lib/apt/lists/*
+# Copy static FFmpeg binaries (no apt-get required)
+COPY --from=ffmpeg /ffmpeg /usr/local/bin/
+COPY --from=ffmpeg /ffprobe /usr/local/bin/
 
 # Create non-root user
 RUN groupadd --system analyzer && \
@@ -56,6 +59,6 @@ USER analyzer
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-  CMD wget --no-verbose --tries=1 -qO /dev/null http://localhost:8000/health || exit 1
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
 
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
