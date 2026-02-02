@@ -1,35 +1,21 @@
 # ============================================================
-# Stage 1: Build dependencies (with compile tools)
+# Stage 1: Build dependencies (no apt-get needed - all packages have pre-built wheels)
 # ============================================================
 FROM python:3.12-slim AS builder
-
-# Install build dependencies for PyAV (FFmpeg) and OpenCV
-# Retry apt-get update up to 3 times to handle transient network issues
-RUN for i in 1 2 3; do apt-get update && break || sleep 5; done && \
-    apt-get install -y --no-install-recommends \
-    build-essential \
-    pkg-config \
-    libavformat-dev \
-    libavcodec-dev \
-    libavdevice-dev \
-    libavutil-dev \
-    libavfilter-dev \
-    libswscale-dev \
-    libswresample-dev \
-    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 COPY requirements.txt .
 
 # Install Python packages into a virtual env for clean copy
+# av (PyAV) and opencv-python-headless ship pre-built wheels with bundled FFmpeg
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 RUN pip install --no-cache-dir -r requirements.txt
 
 # ============================================================
-# Stage 2: Get static FFmpeg binaries
+# Stage 2: Get static FFmpeg binaries (for CLI usage)
 # ============================================================
 FROM mwader/static-ffmpeg:7.1 AS ffmpeg
 
@@ -38,7 +24,7 @@ FROM mwader/static-ffmpeg:7.1 AS ffmpeg
 # ============================================================
 FROM python:3.12-slim AS runner
 
-# Copy static FFmpeg binaries (no apt-get required)
+# Copy static FFmpeg binaries (for any CLI ffmpeg usage)
 COPY --from=ffmpeg /ffmpeg /usr/local/bin/
 COPY --from=ffmpeg /ffprobe /usr/local/bin/
 
