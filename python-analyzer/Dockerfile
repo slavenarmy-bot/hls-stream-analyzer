@@ -4,7 +4,9 @@
 FROM python:3.12-slim AS builder
 
 # Install build dependencies for PyAV (FFmpeg) and OpenCV
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN --mount=type=cache,target=/var/cache/apt \
+    --mount=type=cache,target=/var/lib/apt \
+    apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     pkg-config \
     libavformat-dev \
@@ -13,8 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libavutil-dev \
     libavfilter-dev \
     libswscale-dev \
-    libswresample-dev \
-    && rm -rf /var/lib/apt/lists/*
+    libswresample-dev
 
 WORKDIR /app
 
@@ -32,10 +33,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 FROM python:3.12-slim AS runner
 
 # Install only runtime FFmpeg libraries (no build tools)
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN --mount=type=cache,target=/var/cache/apt \
+    --mount=type=cache,target=/var/lib/apt \
+    apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
-    wget \
-    && rm -rf /var/lib/apt/lists/*
+    wget
 
 # Create non-root user
 RUN groupadd --system analyzer && \
@@ -44,15 +46,12 @@ RUN groupadd --system analyzer && \
 WORKDIR /app
 
 # Copy virtual environment from builder
-COPY --from=builder /opt/venv /opt/venv
+COPY --from=builder --chown=analyzer:analyzer /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy application code
-COPY main.py ./
-COPY analyzer ./analyzer
-
-# Set ownership
-RUN chown -R analyzer:analyzer /app
+COPY --chown=analyzer:analyzer main.py ./
+COPY --chown=analyzer:analyzer analyzer ./analyzer
 
 USER analyzer
 
